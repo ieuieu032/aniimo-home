@@ -24,9 +24,9 @@
   const send=(n,p)=>{try{gtag("event",n,p||{});}catch(e){}};
   const st=()=>{try{return state;}catch(e){return null;}};
   let last="";
-  function key(S){return [S.lv,S.ev||0,S.rbv||"",S.alt?1:0,S.alt2?1:0,S.dl?1:0,S.nf?1:0,S.cx?1:0].join("|");}
+  function key(S){return [S.lv,S.ev||0,S.rbv||"",S.alt?1:0,S.alt2?1:0,S.dl?1:0,S.nf?1:0,S.cx?1:0,S.ms?1:0].join("|");}
   function onView(){const S=st(); if(!S) return; const k=key(S); if(k===last) return; last=k;
-    send("view_layout",{lv:String(S.lv),variant:[S.nf?"通常":"イベント",S.nf?"":"枠"+(S.ev||8),S.rbv||"",S.alt?"alt":"",S.alt2?"alt2":"",S.dl?"デイリー":""].filter(Boolean).join("・"),mode:S.cx?"custom":"recommended",lang:document.documentElement.lang});}
+    send("view_layout",{lv:String(S.lv),variant:[S.nf?"通常":"イベント",S.nf?"":"枠"+(S.ev||8),S.rbv||"",S.alt?"alt":"",S.alt2?"alt2":"",S.dl?"デイリー":"",S.ms?"時々切り替え":""].filter(Boolean).join("・"),mode:S.cx?"custom":"recommended",lang:document.documentElement.lang});}
   const v=document.getElementById("view"); if(v){new MutationObserver(onView).observe(v,{childList:true}); onView();}
   document.addEventListener("click",e=>{const t=e.target; if(!t.closest) return; const S=st()||{};
     if(t.closest("#cx-go")) send("custom_calc",{lv:String(S.lv)});

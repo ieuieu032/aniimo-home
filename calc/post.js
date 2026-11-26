@@ -142,6 +142,7 @@ function make(S) {
     for (const [k] of chosen) o.proc[k].pw = 1;
     for (const g of o.proc) if (g.f in SH && !g.lvup && 'lv' in g) g.lv = label(lv, g);
     const totW = W + chosen.reduce((a, x) => a + x[1], 0);
+    o._pwLeft = left - best[2].reduce((a, x) => a + x[1], 0);   // 11/27 メイン＋サブで1つのレシピを2台に分けたとき、残りの電力で2台目も電力モードにする
     const pj = [];
     for (const p of parts) {
       let mm;
@@ -267,7 +268,8 @@ function make(S) {
     const tOf = (r, d, pw) => { const w = (WORK[r] || [0, 0])[1]; return pw ? d * w / 1.8 / 86400 : d * (ms.sec[r] || 0) / 86400; };   // 1日のうち動いている時間の割合
     const cap = pw => pw ? 1 : 0.9;
     if (ms.z) { const out = []; for (const g of o.proc) { const n = (!g.lvup && g.items.length === 1) ? (ms.z[g.items[0].r] || 1) : 1;   // 1つのレシピを2台で回すなら2台に分ける
-        if (n <= 1) { out.push(g); continue; } for (let i = 0; i < n; i++) { const c = Object.assign({}, g, { items: g.items.map(it => Object.assign({}, it, { d: Math.max(1, Math.round(it.d / n)) })) }); if (i) delete c.pw; out.push(c); } }
+        if (n <= 1) { out.push(g); continue; } for (let i = 0; i < n; i++) { const c = Object.assign({}, g, { items: g.items.map(it => Object.assign({}, it, { d: Math.max(1, Math.round(it.d / n)) })) }); if (i) { const cw = (g.pw && g.f in SH) ? 15 * ML(lv)[SH[g.f]] : 0; if (cw && o._pwLeft >= cw - 1e-6) { o._pwLeft -= cw; o._pwAdd = (o._pwAdd || 0) + cw; } else delete c.pw; } out.push(c); } }
+      if (o._pwAdd) for (const a of o.areas || []) for (const r of a[1]) if (r.fac === 'パチパチ発電ポール' && r.sub) r.sub = r.sub.replace(/\(([\d,]+)W\)/, (m, x) => `(${(+x.replace(/,/g, '') + o._pwAdd).toLocaleString('en-US')}W)`);
       o.proc = out; }
     const subs = Object.entries(ms.sub).map(([r, d]) => [r, d]).sort((a, b) => tOf(b[0], b[1]) - tOf(a[0], a[1]));
     const byF = {}; for (const [r, d] of subs) { const f = Object.keys(S.FACS).find(f => S.FACS[f].includes(r)); if (f) (byF[f] = byF[f] || []).push([r, d]); }
@@ -293,7 +295,7 @@ function make(S) {
     const o = conv(clone(c));
     // 11/24 ユーザー: 切り替えありは、先に1台ずつに分けてから電力モードの台を選ぶ(まとめたままだと、時間の割合が出ない・台数より多く並ぶ)
     levels(lv, o); tidy(o); lvup(lv, o); if (opt.sw) swUnits(lv, o, opt.sw, opt.swMax); power(lv, o, opt.poleW, opt.poleLv, opt.poleL4, !!opt.sw);
-    if (opt.ms && !opt.sw) msUnits(lv, o, opt.ms);   // 11/25 メイン＋サブ(電力モードの台が決まってから)
+    if (opt.ms && !opt.sw) msUnits(lv, o, opt.ms); delete o._pwLeft; delete o._pwAdd;   // 11/25 メイン＋サブ(電力モードの台が決まってから)
     if (opt.sw) for (const g of o.proc) if (g.pw && !g.lvup) {   // 電力モードの台は180%で止まらない: 1日のうち何%の時間で作り終わるか(使い過ぎ防止)
       for (const it of g.items) { const w = (WORK[it.r] || [0, 0])[1]; it.pct = w ? Math.max(1, Math.round(it.d * w / 1.8 / 86400 * 100)) : undefined; }
       if (g.items.length === 1 && g.items[0].pct >= 98) delete g.items[0].pct;
@@ -307,6 +309,12 @@ function make(S) {
     }
     for (const g of o.proc) for (const it of g.items) { delete it.e; delete it.lim; }
     fix1103b(lv, o); splitRb(o); tagPole(lv, o, opt.poleLv, opt.poleTagOff || opt.poleL4 === 0);
+    // 11/27 雷Lv4(虹色)が一部の本数だけのときは、虹色の印をその本数の行に分ける
+    if (opt.poleL4 > 0) for (const a of o.areas) if (a[0] === 'アニモを占有する施設') { const out = [];
+      for (const r of a[1]) { const isRb = (r.tag && r.tag[0] === 'rb') || (r.tag2 && r.tag2[0] === 'rb');
+        if (r.fac === 'パチパチ発電ポール' && isRb && r.n > opt.poleL4) { const x = Object.assign({}, r, { n: r.n - opt.poleL4 }); if (x.tag && x.tag[0] === 'rb') delete x.tag; if (x.tag2 && x.tag2[0] === 'rb') delete x.tag2; delete x.sub; delete x.sub0;
+          out.push(Object.assign({}, r, { n: opt.poleL4 }), x); } else out.push(r); }
+      a[1] = out; }
     for (const [t, rows] of o.areas) for (const r of rows) if (r.sub) r.sub = r.sub.replace(/とクーラー\(([^)]+)\)の範囲が重なる所に/g, 'とクーラー($1)の両方の範囲にかかる所に');   // ui_1109.py
     return o;
   }

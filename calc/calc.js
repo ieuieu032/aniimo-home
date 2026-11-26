@@ -181,12 +181,14 @@ function apply(T, cond, allow) {
       if (mk !== undefined) R.push([[[vi, 1], [mk, -q]], -Infinity, 0]);
     }
   }
+  // 11/27 必ず含める品物の材料を森・鉱山で作ると木材・鉱砂が最大にならないとき、下限をそこまで下げる(lbFix が決める)
+  if (cond.lbOver) { const tg = T.tags || {}; for (const [k, v] of Object.entries(cond.lbOver)) if (tg[k] !== undefined) R[tg[k]][1] = v; }
   const rows = R.filter((r, i) => !drop.has(i));
   for (const r of rbRows) rows.push(r);
   for (const r of flRows) rows.push(r);
   for (const r of (cond.extraRows || [])) rows.push(r);
   if (cond.occMax !== undefined && cond.occMax !== null) rows.push([Object.entries(T.occ).map(([i, c]) => [+i, c]), -Infinity, cond.occMax]);
-  return { V, rows };
+  return { V, rows, R };
 }
 function rbGroup(nm) {   // 11/23 虹色の変数名 → 置けるアニモが同じ施設のグループ
   if (nm.startsWith('鉱')) return 'mine'; if (nm.startsWith('井')) return 'well';
@@ -221,6 +223,7 @@ function solveOnce(T, H, cond, allow, mode, ptMin) {
   const M = apply(T, cond, allow); if (!M) return null;
   let obj;
   if (mode === 'pts') { obj = M.V.map(() => 0); for (const [i, c] of Object.entries(T.pts)) obj[+i] = c; }
+  else if (typeof mode === 'number') { obj = M.V.map(() => 0); for (const [i, c] of M.R[mode][0]) obj[+i] += c; }   // 11/27 行の式を最大に(木材・鉱砂)
   else {   // tiebreak(m3.py と同じ)
     obj = M.V.map(v => v[4]);
     M.V.forEach((v, i) => { if (v[0].endsWith(':猛涼') || v[0].endsWith(':暖凍')) obj[i] -= 1e-4; });
@@ -238,11 +241,32 @@ function solveOnce(T, H, cond, allow, mode, ptMin) {
   return { x, names: M.V.map(v => v[0]), coin: dot(T.coin), pts: dot(T.pts), occ: Math.round(dot(T.occ)), status: r.Status };
 }
 // run3_par.py と同じ: ポイント最大 → その中でコイン最大 → 施設を1つずつ減らしてもコインが0.5以内なら減らす
+// 11/27 必ず含める品物が「木材・鉱砂を最大」の前提とぶつかって組めないとき: 品物を作れる範囲で木材→鉱砂の順に最大にした値を下限にして解き直す
+function hasMust(cond) { return Array.isArray(cond.must) ? cond.must.length > 0 : !!(cond.must && cond.must.item); }
+function lbFix(T, H, cond) {
+  prep(T); const tg = T.tags || {}; const keys = ['wood', 'ore'].filter(k => tg[k] !== undefined); if (!keys.length) return null;
+  const base = apply(T, cond); if (!base) return null;
+  const c = Object.assign({}, cond, { lbOver: {} }); for (const k of keys) c.lbOver[k] = -Infinity;
+  const cut = {};
+  for (const k of keys) {
+    const r = solveOnce(T, H, c, null, tg[k], null); if (!r) return null;
+    const M = apply(T, c); let v = 0; for (const [i, co] of M.R[tg[k]][0]) v += co * r.x[+i];
+    const lb0 = base.R[tg[k]][1]; c.lbOver[k] = Math.min(lb0, v - Math.max(1e-6, Math.abs(v) * 1e-7));
+    if (lb0 > 0 && v < lb0 - 1e-6) cut[k] = Math.max(1, Math.round((1 - v / lb0) * 100));
+  }
+  c._cut = cut; return c;
+}
 function calc(T, cond, H, opt) {
+  const r = calc0(T, cond, H, opt);
+  if (r || cond.lbOver || !hasMust(cond)) return r;
+  const c = lbFix(T, H, cond); if (!c || !Object.keys(c._cut).length) return null;
+  const r2 = calc0(T, c, H, opt); if (r2) r2.lbCut = c._cut; return r2;
+}
+function calc0(T, cond, H, opt) {
   opt = opt || {};
   if (cond.ms && cond.msGroups && !cond.sw) {   // 11/25 メイン＋サブ: 先に切り替えなしで解いて(施設を減らすところまで)、その施設の数のままサブを足して解き直す(まとめて解くと遅い)
     const t0 = Date.now(), c0 = Object.assign({}, cond, { ms: false, msGroups: undefined });
-    const on = opt.onStep, base = calc(T, c0, H, Object.assign({}, opt, { onStep: on ? (n, r, p) => on(n, r, p * 0.85) : undefined })); if (!base) return null;
+    const on = opt.onStep, base = calc0(T, c0, H, Object.assign({}, opt, { onStep: on ? (n, r, p) => on(n, r, p * 0.85) : undefined })); if (!base) return null;
     if (opt.quick && !base.caps) base.caps = caps(T, base.x);
     const pm = (T.lv !== 9 && (cond.slots || 0) > 0) ? base.pts - 1e-4 : null;
     const r = solveOnce(T, H, cond, base.caps, 'coin', pm); if (on) on(base.solves + 1, r, 0.99);

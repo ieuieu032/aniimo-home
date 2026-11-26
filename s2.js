@@ -387,12 +387,12 @@ function RBOWNUI(){
 // 11/23 ユーザー: 新エリア(シオサイ群島)のアニモを一括で外したい。図鑑番号W〜(シーズン限定は別扱いなので入れない、ユーザー判断)
 function WSPL(){return [...new Set(DATA.animo.filter(a=>/^W/.test(a.no)).map(a=>a.name))];}
 let TMKEY="";
-function tmKey(){const P=__PS(); return [P.lv,P.k,P.alt,P.alt2,P.dl,P.dm,P.ev,P.rbv,P.nf].join("|");}
+function tmKey(){const P=__PS(); return [P.lv,P.k,P.alt,P.alt2,P.dl,P.dm,P.ev,P.rbv,P.nf,P.ms?1:0].join("|");}
 let CUSTOM=null;   // 11/23 「自分の条件で計算」の配置(早見表の opts の形 → teamconv.js で編成の形に)
 function onPage(){ const el=document.getElementById("tm-view"); if(!el) return;
   const P=__PS(); let cres=null; try{ if(P.cx&&typeof CX!=="undefined"&&CX.res&&CX.res.key===cxKey()) cres=CX.res; }catch(e){}
   if(P.cx&&!cres){ el.innerHTML=`<p class="status">「計算する」を押すと、その配置の編成も出ます。</p>`; TMKEY=""; return; }
-  CUSTOM=cres?TCV.conv(P.lv,cres.o):null;
+  CUSTOM=cres?TCV.conv(P.lv,cres.o):(!P.cx&&typeof MSOC!=="undefined"&&MSOC?TCV.conv(P.lv,MSOC.opts[0]):null);   // 11/26 おすすめの「時々切り替える」も同じ
   loadHighs(); const k=tmKey()+(cres?"|cx|"+cres.key:""); if(k!==TMKEY){TMKEY=k; schedule();} else if(TMH) el.innerHTML=TMH; else render(); }
 let TMH="";
 window.TMHTML=()=>TMH||`<p class="status">計算中…</p>`;

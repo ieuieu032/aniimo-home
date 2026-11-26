@@ -187,10 +187,15 @@ function make(S) {
   }
   function rbTag(xs, x, fac, lv) {
     if (!xs.some(([k, v]) => k.startsWith('虹:') && v > 0.5)) return;
+    const rbUsed = {};
     for (const r of fac) { const f = r.fac; let k = 0;
       if (f === '鉱山' && r.p in S.RB_MINEKEY) k = pyround(x.get('虹:' + S.RB_MINEKEY[r.p]) || 0);
       else if (f === '井戸' && r.p in S.RB_WELLKEY) k = pyround(x.get('虹:' + S.RB_WELLKEY[r.p]) || 0);
-      else if (f in S.RB_FULL && xs.some(([kk, v]) => kk.startsWith(S.RB_FULL[f]) && v > 0.5)) k = r.n;
+      else if (f in S.RB_FULL) {   // 11/27 持っている数で一部だけ虹色のこともある → レシピごとの虹の台数(同じレシピの行が続くときは前から)
+        const p = r.p || '', sel = f === '潮の砂城' ? (kk => p.includes('真珠') === kk.includes('真珠')) : f === '星降るハンモック' ? (kk => p.includes('傘') === kk.includes('傘'))
+          : f === 'わたぐも草ベッド' ? (kk => p.includes('花びら') ? kk.includes('花びら') : p.includes('高速') ? kk.includes(':高速') : kk === '虹:わたぐも') : (() => true);
+        let tot = 0; for (const [kk, v] of xs) if (kk.startsWith(S.RB_FULL[f]) && sel(kk)) tot += v;
+        const key = f + '|' + p, used = rbUsed[key] || 0; k = Math.max(0, Math.min(r.n, pyround(tot) - used)); rbUsed[key] = used + k; }
       else if (f === 'パチパチ発電ポール' && lv >= 20) k = r.n;
       if (k) r.rb = k; }
   }
