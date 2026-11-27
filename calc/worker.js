@@ -56,7 +56,10 @@ onmessage = async (e) => {
       for (const [f, rs0] of Object.entries(S.FACS)) { const cnt = cond.fl && cond.fl[f] ? cond.fl[f].filter(l => l > 0).length : ((S.FACCOUNT[String(lv)] || {})[f] || 1); if (!cnt) continue; const rs = rs0.filter(r => T.ix['z:' + r] !== undefined); if (rs.length) cond.msGroups.push([rs, cnt]); }
     }
     let full = AniimoCalc.calc(T, cond, H, { onStep: (n, r, p) => postMessage({ id, type: 'step', n, p }) });   // 11/22 ユーザー: 仮の結果は出さない
-    if (!full) { postMessage({ id, type: 'none', why: why(T, cond) }); return; }
+    if (!full) {   // 11/27 占有アニモの上限で組めないときは、この条件で組める一番少ない数を探して伝える
+      let occMin; if (cond.occMax !== undefined && cond.occMax !== null) { const c0 = Object.assign({}, cond); delete c0.occMax; const r0 = AniimoCalc.calc(T, c0, H, { quick: true });
+        if (r0) { let lo = cond.occMax + 1, hi = Math.round(r0.occ); while (lo < hi) { const mid = Math.floor((lo + hi) / 2); if (AniimoCalc.calc(T, Object.assign({}, cond, { occMax: mid }), H, { quick: true })) hi = mid; else lo = mid + 1; } occMin = hi; } }
+      postMessage({ id, type: 'none', why: occMin ? [] : why(T, cond), occMin }); return; }
     let o = toPage(T, full, lv, cond);
     // 11/27 1台のレシピ数の上限: 「使うレシピの数 ≦ 台数×上限」だけでは、1台まるごと使うレシピがあると1台に収まらないことがある → その施設の上限を1つずつ下げて解き直す
     for (let it = 0; cond.sw && cond.swMax && it < 4; it++) {
