@@ -105,15 +105,17 @@ function apply(T, cond, allow) {
   if (cond.human > 0) {
     const HF = { '井:井戸水': 2 / 2.4, '井:清水': 2 / 2.1, '井:高速清水': 2 / 1.8, '井:深層湧水': 2 / 1.8, '井:高速深層湧水': 2 / 1.8, '井:天然鉱泉': 2 / 1.8, '井:高速天然鉱泉': 2 / 1.8, '井:雪解けの冷泉': 2 / 1.8,
       '鉱:岩石': 2 / 2.4, '鉱:粘土': 2 / 2.1, '鉱山': 2 / 2.1, '鉱:銅': 2 / 1.8, '鉱:石英': 2 / 1.8, '鉱:宝石': 2 / 1.8, '鉱:銀': 2 / 1.8 };
+    // 11/27 ユーザー: サブキャラも作業できる(cond.humN 人。同じ井戸・鉱山に何人でも入れる → 1台あたり humN 人分まで。合計は人数×24時間まで)
+    const K = Math.max(1, cond.humN || 1);
     const hs = [], hv = {};
     for (const [nm, f] of Object.entries(HF)) { const vi = T.ix[nm]; if (vi === undefined || V[vi][2] <= 0) continue;
       V.push(['人:' + nm, 0, 1, 0, 0]); const hi = V.length - 1; hs.push([hi, 1]);
       for (const ri of Object.values(T.bal_row)) for (const [i, c] of R[ri][0]) if (i === vi && c > 0) { R[ri][0].push([hi, c * f]); break; }   // 1日ずっとなら1台分×倍率
       const ei = T.ix['電井:' + nm];   // 11/26 ユーザー: 電力モードの施設では人は作業できない
-      R.push([[[hi, 1], [vi, -1]].concat(ei !== undefined ? [[ei, 1]] : []), -Infinity, 0]); hv[nm] = hi; }
-    if (hs.length) R.push([hs, -Infinity, Math.min(24, cond.human) / 24]);
+      R.push([[[hi, 1], [vi, -K]].concat(ei !== undefined ? [[ei, K]] : []), -Infinity, 0]); hv[nm] = hi; }
+    if (hs.length) R.push([hs, -Infinity, Math.min(24 * K, cond.human) / 24]);
     const mn = ['鉱:銅', '鉱:石英', '鉱:宝石', '鉱:銀'].filter(n => hv[n] !== undefined), p4 = T.ix['電:鉱4'], p5 = T.ix['電:鉱5'];   // 鉱山の電力モードは鉱石をまとめた数
-    if (mn.length && (p4 !== undefined || p5 !== undefined)) R.push([mn.map(n => [hv[n], 1]).concat(mn.map(n => [T.ix[n], -1]), p4 !== undefined ? [[p4, 1]] : [], p5 !== undefined ? [[p5, 1]] : []), -Infinity, 0]);
+    if (mn.length && (p4 !== undefined || p5 !== undefined)) R.push([mn.map(n => [hv[n], 1]).concat(mn.map(n => [T.ix[n], -K]), p4 !== undefined ? [[p4, K]] : [], p5 !== undefined ? [[p5, K]] : []), -Infinity, 0]);
   }
   // 11/25 ユーザー: メイン＋サブ。切り替えなしの配置(メイン = セットしっぱなし。止め忘れの心配なしの決まりはそのまま)に、
   //   メインの台の空き時間で、売る分の材料だけを使って時々作るサブ(1台に1つまで)を足す。サブを回し忘れても、切り替えなしの配置に戻るだけ
