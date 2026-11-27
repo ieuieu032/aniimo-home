@@ -89,6 +89,15 @@ function make(S) {
         if ('lv' in g4) gc.lv = g4.lv;
         gs = [ga, gb, gs[1], gc].concat(gs.slice(4));
       }
+      // 11/28 ユーザー「鉱砂の加工間に合う?」: 粗粒骨材も、能力Lv3のアニモ1体で1日に作れる量(作業34・推奨Lv2 → 約9,150個)を超えるときは2台に分ける。残りの2段は1台で切り替え
+      if (fac === '煙突鍛造炉' && n >= 4 && gs[0].items[0].d * 34 * 100 / (300 * 1.2) / 86400 > 1 + 1e-9) {
+        const g1 = gs[0], d1 = g1.items[0].d;
+        const ga = Object.assign({}, g1, { items: [Object.assign({}, g1.items[0], { d: pyround(d1 / 2) })], sub: '粗粒骨材は量が多く、1台では追いつかないので2台で作る。' }), gb = Object.assign({}, ga);
+        const g3 = gs[2], g4 = gs[3];
+        const gc = { f: fac, items: [g3.items[0], g4.items[0]], lvup: true, sub: '精錬鉱材と微結晶鉱物板は量が少ないので、1台でレシピを切り替えて作る。' };
+        if ('lv' in g4) gc.lv = g4.lv;
+        gs = [ga, gb, gs[1], gc].concat(gs.slice(4));
+      }
       o.proc = o.proc.concat(gs);
     }
   }
