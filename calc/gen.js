@@ -132,7 +132,7 @@ function make(S) {
     } else if (lv >= 12 && nmine >= 4) {
       const npw0 = lv >= 15 ? 4 : ((lv >= 14 && nmine >= 5) ? 5 : 4);
       const nwell = pyround(g('井:高速清水')); const aroma = g('作:上級レモンアロマ') > 1e-4;
-      const mix3 = (lv === 12) && nwell >= 1 && aroma;   // WELL3 なし(11/22〜 施設は全部最大Lv)
+      const mix3 = (lv === 12) && nwell >= 1 && aroma && !((opt && opt.hum) || []).includes('井:高速清水');   // 11/27 キャラが放置で作業する井戸は電力モードにしない   // WELL3 なし(11/22〜 施設は全部最大Lv)
       const mix14 = false; const mpw = mix3 ? 3 : npw0; const wpw = mix3 ? 1 : 0; const npw = npw0;
       for (const [t, rows] of areas) {
         if (t === '鉱山') for (const rw of rows) if (rw.p === (lv >= 21 ? '銀鉱石' : lv >= 18 ? '宝石' : lv >= 15 ? '石英鉱石' : '銅鉱石')) rw.sub = `うち${mpw}枠は電力モード(アニモ不要)。` + rw.sub;

@@ -229,7 +229,7 @@ function make(S) {
       const gs = o.proc.filter(g => g.f === f), fixed = gs.filter(g => g.lvup), free = gs.filter(g => !g.lvup);   // 11/24 電力モードの台はこのあとの power() で選び直すので、ここでは分けない
       const its = free.flatMap(g => g.items).map(it => [it, Math.max(z[it.r] || 0, 1e-3)]);
       const room = FC(lv, f) - fixed.length, ceilSum = its.reduce((a, [, v]) => a + Math.ceil(v - 0.02), 0);
-      if (!its.length || (ceilSum <= room && !(mx && free.some(g => g.items.length > mx)))) { for (const g of free) for (const it of g.items) { const v = z[it.r] || 0; if (v > 0 && (g.items.length > 1 || v < 0.98)) it.pct = Math.max(1, Math.round(v * 100)); } out.push(...gs); continue; }   // 1台1レシピで足りる(11/24 1日の一部しか使わない台は時間の割合を出す)
+      if (!its.length || (ceilSum <= room && free.length <= room && !(mx && free.some(g => g.items.length > mx)))) { for (const g of free) for (const it of g.items) { const v = z[it.r] || 0; if (v > 0 && (g.items.length > 1 || v < 0.98)) it.pct = Math.max(1, Math.round(v * 100)); } out.push(...gs); continue; }   // 1台1レシピで足りる(11/24 1日の一部しか使わない台は時間の割合を出す)
       if (mx) {   // 11/24 1台のレシピ数の上限: 並べ方を変えて順に詰め、上限と台数に収まるものを使う(1つのレシピが2台にまたがってもよい)
         const asc = its.slice().sort((a, b) => a[1] - b[1]), desc = asc.slice().reverse(), alt = []; for (let i = 0, j = desc.length - 1; i <= j; i++, j--) { alt.push(desc[i]); if (i !== j) alt.push(desc[j]); }
         let got = null;
@@ -252,6 +252,7 @@ function make(S) {
       for (const fr of frac) { const b = bins.find(b => b.load + fr[1] <= 1.0001 && (!mx || b.list.length < mx)); if (b) { b.list.push(fr); b.load += fr[1]; } else bins.push({ list: [fr], load: fr[1] }); }   // 11/24 mx: 1台のレシピ数の上限
       if (units.length + bins.length > room) {   // 順に詰める(1つのレシピが2台にまたがる)
         bins.length = 0; let cur = null;
+        if (units.length && units.length + 1 > room) { units.length = 0; frac.length = 0; for (const [it, v] of its) frac.push([it, v, v]); }   // 11/27 0.99台分を1台と数えて台数を超えていた(ミル1台で米0.99＋ライスミルク0.01)→ 全部を順に詰める
         for (const [it, v0, vt] of frac) { let v = v0; while (v > 0.005) { if (!cur || cur.load >= 0.995) { cur = { list: [], load: 0 }; bins.push(cur); } const p = Math.min(v, 1 - cur.load); cur.list.push([it, p, vt]); cur.load += p; v -= p; } }
       }
       for (const b of bins) {

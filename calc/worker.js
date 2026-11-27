@@ -15,7 +15,7 @@ function toPage(T, r, lv, cond) {
   if (ms) for (const [r, c0] of Object.entries(T._c0 || {})) ms.sec[r] = 0.9 * 60 / c0;
   if (ms && r.names) r.names.forEach((nm, k) => { if (nm.startsWith('z:') && r.x[k] > 1.5) ms.z[nm.slice(2)] = Math.round(r.x[k]); if (nm.startsWith('サブ:') && r.x[k] * 1440 >= 0.5) ms.sub[nm.slice(3)] = r.x[k] * 1440; });
   const human = []; if (cond.human > 0 && r.names) r.names.forEach((nm, k) => { if (nm.startsWith('人:') && r.x[k] * 24 >= 0.05) human.push([nm.slice(2), Math.round(r.x[k] * 24 * 10) / 10]); });   // 11/26 プレイヤーの放置作業(レシピ, 1日の時間)
-  const page = POST.page(GEN.config(xs, { coin: r.coin, occ: r.occ }, lv, cond.fl ? { mx, poleW: cond.pole_w } : {}), lv, { fl: cond.fl, poles: cond.poles, ms, poleW: cond.pole_w, poleLv: cond.poleLv, poleL4: cond.poleL4, sw, swMax: cond.swMax, must: (cond.must || []).map(m => m.item) });
+  const page = POST.page(GEN.config(xs, { coin: r.coin, occ: r.occ }, lv, Object.assign(cond.fl ? { mx, poleW: cond.pole_w } : {}, { hum: human.map(h => h[0]) })), lv, { fl: cond.fl, poles: cond.poles, ms, poleW: cond.pole_w, poleLv: cond.poleLv, poleL4: cond.poleL4, sw, swMax: cond.swMax, must: (cond.must || []).map(m => m.item) });
   page.human = human;
   if (r.lbCut) page.lbCut = r.lbCut;   // 11/27 必ず含める品物のために木材・鉱砂の下限を下げた割合(%)
   // 11/27 ユーザー: 放置作業をどこでするか分かるように、表の井戸・鉱山の行に印(電力モードの台では人は作業できない)
@@ -55,8 +55,24 @@ onmessage = async (e) => {
       AniimoCalc.prep(T); cond.msGroups = [];
       for (const [f, rs0] of Object.entries(S.FACS)) { const cnt = cond.fl && cond.fl[f] ? cond.fl[f].filter(l => l > 0).length : ((S.FACCOUNT[String(lv)] || {})[f] || 1); if (!cnt) continue; const rs = rs0.filter(r => T.ix['z:' + r] !== undefined); if (rs.length) cond.msGroups.push([rs, cnt]); }
     }
-    const full = AniimoCalc.calc(T, cond, H, { onStep: (n, r, p) => postMessage({ id, type: 'step', n, p }) });   // 11/22 ユーザー: 仮の結果は出さない
+    let full = AniimoCalc.calc(T, cond, H, { onStep: (n, r, p) => postMessage({ id, type: 'step', n, p }) });   // 11/22 ユーザー: 仮の結果は出さない
     if (!full) { postMessage({ id, type: 'none', why: why(T, cond) }); return; }
-    postMessage({ id, type: 'final', o: toPage(T, full, lv, cond), solves: full.solves, ms: Date.now() - t0 });
+    let o = toPage(T, full, lv, cond);
+    // 11/27 1台のレシピ数の上限: 「使うレシピの数 ≦ 台数×上限」だけでは、1台まるごと使うレシピがあると1台に収まらないことがある → その施設の上限を1つずつ下げて解き直す
+    for (let it = 0; cond.sw && cond.swMax && it < 4; it++) {
+      const bad = new Set(o.proc.filter(g => !g.lvup && g.items.length > cond.swMax).map(g => g.f)); if (!bad.size) break;
+      let ch = false; for (const gr of cond.swGroups) { const f = Object.keys(S.FACS).find(k => S.FACS[k].includes(gr[0][0])); if (bad.has(f) && gr[1] > gr[2]) { gr[1] -= 1; ch = true; } }
+      if (!ch) break; const f2 = AniimoCalc.calc(T, cond, H, {}); if (!f2) break; full = f2; o = toPage(T, full, lv, cond);
+    }
+    // 11/27 メイン＋サブ: サブを2台に分けたせいで別のサブの置き場がなくなり、台数より多くなったとき → そのサブを使わずに解き直す
+    for (let it = 0; cond.ms && !cond.sw && it < 3; it++) {
+      const extra = [];
+      for (const f of new Set(o.proc.map(g => g.f))) { const us = o.proc.filter(g => g.f === f && !g.lvup);
+        const cnt = cond.fl && cond.fl[f] ? cond.fl[f].filter(l => l > 0).length : ((S.FACCOUNT[String(lv)] || {})[f] || 1);
+        if (us.length > cnt) for (const g of us) if (g.items.every(i => i.sub)) for (const i of g.items) extra.push('サブ:' + i.r); }
+      if (!extra.length) break; cond.noVarPrefix = (cond.noVarPrefix || []).concat(extra);
+      const f2 = AniimoCalc.calc(T, cond, H, {}); if (!f2) break; full = f2; o = toPage(T, full, lv, cond);
+    }
+    postMessage({ id, type: 'final', o, solves: full.solves, ms: Date.now() - t0 });
   } catch (err) { postMessage({ id, type: 'error', err: String(err && err.message || err) }); }
 };
