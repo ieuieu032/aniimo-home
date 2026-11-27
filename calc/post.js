@@ -310,12 +310,13 @@ function make(S) {
       for (const it of g.items) { const w = (WORK[it.r] || [0, 0])[1]; it.pct = w ? Math.max(1, Math.round(it.d * w / 1.8 / 86400 * 100)) : undefined; }
       if (g.items.length === 1 && g.items[0].pct >= 98) delete g.items[0].pct;
     }
-    if (opt.sw) {   // 11/24 ユーザー: 止めなくても材料を食いすぎないレシピ(材料をほかのレシピ・食料箱・必ず含める品物で使わない)に印
+    if (opt.sw || (opt.ms && !opt.sw)) {   // 11/24 ユーザー: 止めなくても材料を食いすぎないレシピ(材料をほかのレシピ・食料箱・必ず含める品物で使わない)に印
       const users = {}; for (const g of o.proc) for (const it of g.items) for (const k of Object.keys(S.INS[it.r] || {})) (users[k] = users[k] || new Set()).add(it.r);
       const keep = new Set((opt.must || []).concat(o.foodN ? [o.foodN] : []));
       const fm = (o.food || '').match(/食料は(.+?)1日約/); if (fm) keep.add(fm[1]);
-      for (const g of o.proc) if (!g.lvup && g.items.length === 1 && g.items[0].pct) { const it = g.items[0], ks = Object.keys(S.INS[it.r] || {});
-        if (ks.length && ks.every(k => users[k].size === 1 && !keep.has(k))) it.free = 1; }
+      const own = it => { const ks = Object.keys(S.INS[it.r] || {}); return ks.length && ks.every(k => users[k].size === 1 && !keep.has(k)); };
+      if (opt.sw) { for (const g of o.proc) if (!g.lvup && g.items.length === 1 && g.items[0].pct) { const it = g.items[0]; if (own(it)) it.free = 1; } }
+      else for (const g of o.proc) if (!g.lvup) for (const it of g.items) if (it.sub && own(it)) it.own = 1;   // 11/28 ユーザー: メイン＋サブで、材料をほかで使わないサブは「材料を使い切ってOK」
     }
     for (const g of o.proc) for (const it of g.items) { delete it.e; delete it.lim; }
     fix1103b(lv, o); splitRb(o); tagPole(lv, o, opt.poleLv, opt.poleTagOff || opt.poleL4 === 0);
