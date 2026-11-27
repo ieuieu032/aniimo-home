@@ -103,7 +103,7 @@ function WI(x){ const p=WII[x]; return p?`<a class="wk" href="https://wikily.gg/
 function occHTML(rows){
   const G=[];rows.forEach(r=>{const l=G[G.length-1];if(l&&l.f===r.fac)l.rs.push(r);else G.push({f:r.fac,rs:[r]});});
   const tg=t=>t?`<span class="tag ${t[0]}">${t[1]}</span>`:"";
-  return G.map(g=>`<div class="row proc"><div class="p">${esc(g.f)}</div><div class="to">${g.rs.map(r=>`<div class="unit"><div>${r.lv?`<span class="lvb">Lv.${r.lv}</span>`:""}<span class="cnt">×${r.n}</span>${ENVT[r.p]&&/ヒーター|クーラー|日光ランプ/.test(g.f)?et(r.p):WI(r.p)}${tg(r.tag)}${tg(r.tag2)}${r.hum?`<span class="tag hum">キャラも作業</span>`:""}${envT(r.sub)}</div>${subH(r.sub)}</div>`).join("")}</div></div>`).join("");
+  return G.map(g=>`<div class="row proc"><div class="p">${esc(g.f)}</div><div class="to">${g.rs.map(r=>`<div class="unit"><div>${r.lv?`<span class="lvb">Lv.${r.lv}</span>`:""}<span class="cnt">×${r.n}</span>${ENVT[r.p]&&/ヒーター|クーラー|日光ランプ/.test(g.f)?et(r.p):WI(r.p)}${tg(r.tag)}${tg(r.tag2)}${r.hum?cxHumTag(r):""}${envT(r.sub)}</div>${subH(r.sub)}</div>`).join("")}</div></div>`).join("");
 }
 const ENVT={"暖かい":"warm","猛暑":"hot","涼しい":"cool","凍結":"frozen","十分な日光":"sun"};
 function et(m){return `<span class="tag env ${ENVT[m]||""}">${esc(m)}</span>`;}
@@ -121,7 +121,7 @@ function rowHTML(r){
   const tag = r.tag?`<span class="tag ${r.tag[0]}">${r.tag[1]}</span>`:"";
   const name = r.fac?`<span style="color:var(--muted);font-weight:500;font-size:.85em">${esc(r.fac)}${r.lv?` Lv.${r.lv}`:""}</span><br>${ENVT[r.p]&&/ヒーター|クーラー|日光ランプ/.test(r.fac)?et(r.p):WI(r.p)}`:WI(r.p);
   const tag2 = r.tag2?`<span class="tag ${r.tag2[0]}">${r.tag2[1]}</span>`:"";
-  return `<div class="row"><div class="p">${name}${tag}${tag2}${r.hum?`<span class="tag hum">キャラも作業</span>`:""}${envT(r.sub)}</div><div class="n">${r.n}</div><div class="to">${chain?'<span class="arrow">→ </span>'+chain:""}${subH(r.sub)}</div></div>`;
+  return `<div class="row"><div class="p">${name}${tag}${tag2}${r.hum?cxHumTag(r):""}${envT(r.sub)}</div><div class="n">${r.n}</div><div class="to">${chain?'<span class="arrow">→ </span>'+chain:""}${subH(r.sub)}</div></div>`;
 }
 (function(){
   const root=document.documentElement, btn=document.getElementById("theme-btn");
@@ -172,6 +172,10 @@ function cxHumSplit(list,hs){ const out=hs.map(()=>[]), rest=hs.slice(); let k=0
 function cxHumOut(list){ const c=cxCond(), hs=cxHums(c), one=x=>`<span class="hx">${cxHumLabel(x[0],x[2])} <span>1日約${x[1]}時間</span></span>`;
   if(!(c.hum2||[]).length) return list.map(one).join(" / ");
   const sp=cxHumSplit(list,hs); return hs.map((h,i)=>`<span class="hl"><span>キャラ${i+1}</span>: ${sp[i].length?sp[i].map(one).join(" / "):"<span>作業なし</span>"}</span>`).join(""); }
+// 11/28 ユーザー: キャラが2人以上のときは、表の「キャラも作業」をどのキャラかに(キャラごとの割り当ては cxHumSplit と同じ)
+function cxHumTag(r){ const one=`<span class="tag hum">キャラも作業</span>`; if(!state.cx||!r.humv||!CX.res||!CX.res.o||!CX.res.o.human) return one; const c=cxCond(); if(!(c.hum2||[]).length) return one;
+  const sp=cxHumSplit(CX.res.o.human,cxHums(c)), who=sp.map((l,i)=>l.some(x=>x[0]===r.humv)?i+1:0).filter(Boolean);
+  return who.length?who.map(i=>`<span class="tag hum">キャラ${i}も作業</span>`).join(""):one; }
 function cxMoreChanged(c){ return (cxHumSum(c)>0)||Object.keys(c.fl||{}).length>0||Object.keys(c.dev||{}).length>0||cxTpOff(c).length>0||Object.values(c.sp||{}).some(v=>!v); }
 function cxFlSetU(c,f,i,v){ const m=CXMETA[state.lv]; c.fl=c.fl||{}; let arr, a=(m.fl||[]).find(x=>x[0]===f);
   if(f==="発電ポール"){ arr=cxPoleU(c,m).slice(); arr[i]=v; if(arr.every(l=>l===m.poleMax)) delete c.fl[f]; else c.fl[f]=arr; return; }
@@ -238,7 +242,7 @@ function cxRun(){
   const ms=c.must.filter(Boolean); if(ms.length) cond.must=ms.map(it=>{const sum={}; for(const [k,d,mul,o] of cxTree(it,c.own[it]||{})) if(o) sum[k]=(sum[k]||0)+mul; return {item:it, perDay:40, owned:Object.entries(sum)};});
   if(cond.must) cond.resOff=[...new Set(cond.must.flatMap(x=>x.owned.map(o=>o[0])))];   // 11/24 ユーザー: 持っている材料は取り合いの余りを残さなくてよい
   for(const n of m.sp) if(!c.sp[n]){const k=CXSP[n]; if(k==="作") cond.noRecipe.push(n); else cond.noVarPrefix.push(k);}
-  if(!CX.w){ try{ CX.w=new Worker("calc/worker.js?v=66887da690"); }catch(e){ CX.msg="この画面では計算できません(ブラウザが対応していません)。"; render(); return; }
+  if(!CX.w){ try{ CX.w=new Worker("calc/worker.js?v=09e5adeca3"); }catch(e){ CX.msg="この画面では計算できません(ブラウザが対応していません)。"; render(); return; }
     CX.w.onmessage=e=>{const d=e.data; if(d.id!==CX.id) return;
       if(d.type==="step"){CX.n=d.n; if(d.p!==undefined) CX.p=Math.max(CX.p||0,d.p); cxTick(); return;}
       if(d.type==="final"){CX.res={key:CX.key,o:d.o,final:true}; CX.busy=false; clearInterval(CX.tm); CX.msg=`計算が終わりました(${(d.ms/1000).toFixed(1)}秒)。`; render(); return;}

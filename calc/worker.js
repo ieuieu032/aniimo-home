@@ -1,12 +1,12 @@
 // 11/22 早見表「自分の条件で計算」の裏の計算(Web Worker)。highs.js・calc.js・gen.js・post.js と tpl/ を同じフォルダから読む
-importScripts('highs.js?v=66887da690', 'calc.js?v=66887da690', 'gen.js?v=66887da690', 'post.js?v=66887da690');
+importScripts('highs.js?v=09e5adeca3', 'calc.js?v=09e5adeca3', 'gen.js?v=09e5adeca3', 'post.js?v=09e5adeca3');
 let H = null, S = null, GEN = null, POST = null; const TPL = {};
 async function ready() {
-  if (!H) { const bin = await (await fetch('highs.wasm?v=66887da690')).arrayBuffer();
+  if (!H) { const bin = await (await fetch('highs.wasm?v=09e5adeca3')).arrayBuffer();
     H = await Module({ instantiateWasm: (info, receive) => { WebAssembly.instantiate(bin, info).then(r => receive(r.instance)); return {}; } }); }
-  if (!S) { S = await (await fetch('tpl/static.json?v=66887da690')).json(); GEN = AniimoGen.make(S); POST = AniimoPost.make(S); }
+  if (!S) { S = await (await fetch('tpl/static.json?v=09e5adeca3')).json(); GEN = AniimoGen.make(S); POST = AniimoPost.make(S); }
 }
-async function tpl(lv) { if (!TPL[lv]) TPL[lv] = await (await fetch(`tpl/lv${lv}.json?v=66887da690`)).json(); return TPL[lv]; }
+async function tpl(lv) { if (!TPL[lv]) TPL[lv] = await (await fetch(`tpl/lv${lv}.json?v=09e5adeca3`)).json(); return TPL[lv]; }
 function toPage(T, r, lv, cond) {
   const xs = []; T.vars.forEach((v, k) => { if (Math.abs(r.x[k]) > 1e-6) xs.push([v[0], r.x[k]]); });
   const sw = cond.sw ? Object.fromEntries(xs.filter(([k]) => k.startsWith('z:')).map(([k, v]) => [k.slice(2), v])) : null;
@@ -25,7 +25,7 @@ function toPage(T, r, lv, cond) {
     const base = x => String(x).replace(/^高速レシピ・/, '');   // 11/27 同じ水でも表示が「高速レシピ・」付きのことがある(Lv.5 の井戸水など)
     let rows = occ[1].filter(r => r.fac === fac && r.p === p); if (!rows.length) rows = occ[1].filter(r => r.fac === fac && base(r.p) === base(p));
     const r = rows.find(r => !(r.tag && r.tag[0] === 'pw')) || rows[0];
-    if (r) { r.hum = h; const e = human.find(x => x[0] === v); if (e) e[2] = r.p; } }
+    if (r) { r.hum = h; r.humv = v; const e = human.find(x => x[0] === v); if (e) e[2] = r.p; } }
   return page;
 }
 // 11/24 ユーザー: 組めないときは原因を出す。必ず含める品物の材料のうち、取り合いの余りを外すと組めるものを探す(切り替えなしのとき)
