@@ -445,18 +445,33 @@ document.getElementById("hist-link").addEventListener("click",e=>{const h=docume
 (function(){
   try{
     const hs=document.querySelector("details.history ul"); if(hs) document.getElementById("side-history").innerHTML=hs.innerHTML;
-    const toc=document.getElementById("side-toc"); const items=[];
-    items.push(["配置を選ぶ",document.getElementById("view"),false]);
-    items.push(["選んだ配置の内容",null,false,"result"]);
-    const more=document.getElementById("more"); items.push(["詳しく知りたい人向け",more,false]);
-    let gi=0; more.querySelectorAll(":scope > details, :scope > h3.grp").forEach((d,i)=>{if(d.tagName==="H3"){d.id="grp-"+(gi++); items.push([d.textContent,d,"grp"]);}else{d.id=d.id||("sec-"+i); items.push([d.querySelector("summary").textContent,d,true]);}});
-    items.forEach(([label,el,sub,byId])=>{
-      const li=document.createElement("li"); const a=document.createElement("a");
-      a.textContent=label; a.href="#"+(byId||el.id); if(sub===true) a.className="sub"; if(sub==="grp") a.className="grp";
-      a.addEventListener("click",e=>{e.preventDefault(); const t=byId?document.getElementById(byId):el; if(!t) return;
-        if(t.tagName==="DETAILS") t.open=true; t.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});});
-      li.appendChild(a); toc.appendChild(li);
-    });
+    const toc=document.getElementById("side-toc");
+    const lab=el=>{ if(!el) return ""; const c=el.cloneNode(true); c.querySelectorAll("small,.ibc,button.ib,.envs,.tag").forEach(x=>x.remove()); return c.textContent.replace(/\s+/g," ").trim(); };
+    let n=0; const idOf=el=>{ if(!el.id) el.id="toc-"+(n++); return el.id; };
+    function build(){
+      const items=[];   // [文字, 要素, 深さ(0〜2) | "grp"]
+      const g=document.getElementById("guide"); if(g) items.push([lab(g.querySelector("summary")),g,0]);
+      const v=document.getElementById("view"); items.push(["配置を選ぶ",v,0]);
+      const cx=v.querySelector("section.cx");
+      if(cx){ const h=cx.querySelector("h2"); if(h) items.push([lab(h),cx,1]);
+        cx.querySelectorAll("fieldset.cxset > legend, details.cxmore > summary").forEach(x=>{ const t=x.tagName==="LEGEND"?x.parentElement:x.parentElement; if(x.closest("details.cxmore")&&x.tagName==="LEGEND") return; items.push([lab(x),t,2]); }); }
+      const res=document.getElementById("result");
+      if(res){ items.push(["選んだ配置の内容",res,0]);
+        v.querySelectorAll("section.area > h3").forEach(h=>{ const sec=h.parentElement; if(sec.id==="team") return; const t=lab(h); if(t) items.push([t,sec,1]); });
+        const tm=document.getElementById("team"); if(tm){ items.push([lab(tm.querySelector("h3")),tm,1]);
+          tm.querySelectorAll("h4.tsub").forEach(h=>{ const t=lab(h); if(t) items.push([t,h,2]); });
+          const pr=document.getElementById("tm-premise"); if(pr) items.push([lab(pr.querySelector("summary")),pr,2]); } }
+      const more=document.getElementById("more"); if(more){ items.push(["詳しく知りたい人向け",more,0]);
+        let gi=0; more.querySelectorAll(":scope > details, :scope > h3.grp").forEach((d,i)=>{ if(d.tagName==="H3"){ d.id=d.id||("grp-"+(gi++)); items.push([d.textContent,d,"grp"]); } else { d.id=d.id||("sec-"+i); items.push([lab(d.querySelector("summary")),d,1]); } }); }
+      const key=items.map(x=>x[0]+"|"+x[2]).join("\n"); if(toc.dataset.key===key) return; toc.dataset.key=key; toc.innerHTML="";
+      items.forEach(([label,el,lv])=>{ const li=document.createElement("li"), a=document.createElement("a");
+        a.textContent=label; a.href="#"+idOf(el); a.className=lv==="grp"?"grp":lv===1?"sub":lv===2?"sub2":"";
+        a.addEventListener("click",e=>{ e.preventDefault(); const t=document.getElementById(a.getAttribute("href").slice(1)); if(!t) return;
+          for(let d=t.closest("details");d;d=d.parentElement&&d.parentElement.closest("details")) d.open=true; if(t.tagName==="DETAILS") t.open=true;
+          t.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"}); });
+        li.appendChild(a); toc.appendChild(li); });
+    }
+    build(); let tt=0; new MutationObserver(()=>{ clearTimeout(tt); tt=setTimeout(build,250); }).observe(document.getElementById("view"),{childList:true,subtree:true});
   }catch(e){}
 })();
 document.addEventListener("click",e=>{const a=e.target.closest("a.jump-link");if(!a)return;e.preventDefault();const d=document.getElementById(a.getAttribute("href").slice(1));if(d){if(d.tagName==="DETAILS")d.open=true;d.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});}});

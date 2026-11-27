@@ -220,6 +220,7 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--accent);outline-offse
 .ibrow>label.unlk{margin:0}
 .ibchk{margin:0 0 8px}
 .tag.hum{background:#FCE3CC;color:#7A3B0B}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tag.hum{background:#4A2E17;color:#F6C9A0}}:root[data-theme="dark"] .tag.hum{background:#4A2E17;color:#F6C9A0}
+.side.right a.sub2{padding-left:34px;color:var(--muted);font-size:.76rem}
 html[lang="ko"] body{font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif}html[lang="zh-CN"] body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif}html[lang="zh-TW"] body{font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif}
 .hbtns{display:flex;gap:6px;align-items:center;flex:none;margin-top:4px}
 .head-row{flex-wrap:wrap}
