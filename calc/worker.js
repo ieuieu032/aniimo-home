@@ -1,12 +1,12 @@
 // 11/22 早見表「自分の条件で計算」の裏の計算(Web Worker)。highs.js・calc.js・gen.js・post.js と tpl/ を同じフォルダから読む
-importScripts('highs.js?v=0bb910f910', 'calc.js?v=0bb910f910', 'gen.js?v=0bb910f910', 'post.js?v=0bb910f910');
+importScripts('highs.js?v=c49e3aaca5', 'calc.js?v=c49e3aaca5', 'gen.js?v=c49e3aaca5', 'post.js?v=c49e3aaca5');
 let H = null, S = null, GEN = null, POST = null; const TPL = {};
 async function ready() {
-  if (!H) { const bin = await (await fetch('highs.wasm?v=0bb910f910')).arrayBuffer();
+  if (!H) { const bin = await (await fetch('highs.wasm?v=c49e3aaca5')).arrayBuffer();
     H = await Module({ instantiateWasm: (info, receive) => { WebAssembly.instantiate(bin, info).then(r => receive(r.instance)); return {}; } }); }
-  if (!S) { S = await (await fetch('tpl/static.json?v=0bb910f910')).json(); GEN = AniimoGen.make(S); POST = AniimoPost.make(S); }
+  if (!S) { S = await (await fetch('tpl/static.json?v=c49e3aaca5')).json(); GEN = AniimoGen.make(S); POST = AniimoPost.make(S); }
 }
-async function tpl(lv) { if (!TPL[lv]) TPL[lv] = await (await fetch(`tpl/lv${lv}.json?v=0bb910f910`)).json(); return TPL[lv]; }
+async function tpl(lv) { if (!TPL[lv]) TPL[lv] = await (await fetch(`tpl/lv${lv}.json?v=c49e3aaca5`)).json(); return TPL[lv]; }
 function toPage(T, r, lv, cond) {
   const xs = []; T.vars.forEach((v, k) => { if (Math.abs(r.x[k]) > 1e-6) xs.push([v[0], r.x[k]]); });
   const sw = cond.sw ? Object.fromEntries(xs.filter(([k]) => k.startsWith('z:')).map(([k, v]) => [k.slice(2), v])) : null;
@@ -76,6 +76,13 @@ onmessage = async (e) => {
       if (!extra.length) break; cond.noVarPrefix = (cond.noVarPrefix || []).concat(extra);
       const f2 = AniimoCalc.calc(T, cond, H, {}); if (!f2) break; full = f2; o = toPage(T, full, lv, cond);
     }
+    // 11/28 ユーザー: 「使い切りOKのサブだけ」: 材料をほかのレシピと取り合うサブ(post.js で own が付かないもの)を外して解き直す
+    for (let it = 0; cond.ms && cond.msOwn && !cond.sw && it < 6; it++) {
+      const bad = []; for (const g of o.proc) if (!g.lvup) for (const i of g.items) if (i.sub && !i.own) bad.push('サブ:' + i.r);
+      if (!bad.length) break; cond.noVarPrefix = (cond.noVarPrefix || []).concat(bad);
+      const f2 = AniimoCalc.calc(T, cond, H, {}); if (!f2) break; full = f2; o = toPage(T, full, lv, cond);
+    }
+    if (cond.ms && cond.msOwn) for (const g of o.proc) g.items = g.items.filter(i => !(i.sub && !i.own));   // 念のため(外しきれなかったサブは出さない)
     postMessage({ id, type: 'final', o, solves: full.solves, ms: Date.now() - t0 });
   } catch (err) { postMessage({ id, type: 'error', err: String(err && err.message || err) }); }
 };
