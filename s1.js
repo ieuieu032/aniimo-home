@@ -238,7 +238,7 @@ function cxRun(){
   const ms=c.must.filter(Boolean); if(ms.length) cond.must=ms.map(it=>{const sum={}; for(const [k,d,mul,o] of cxTree(it,c.own[it]||{})) if(o) sum[k]=(sum[k]||0)+mul; return {item:it, perDay:40, owned:Object.entries(sum)};});
   if(cond.must) cond.resOff=[...new Set(cond.must.flatMap(x=>x.owned.map(o=>o[0])))];   // 11/24 ユーザー: 持っている材料は取り合いの余りを残さなくてよい
   for(const n of m.sp) if(!c.sp[n]){const k=CXSP[n]; if(k==="作") cond.noRecipe.push(n); else cond.noVarPrefix.push(k);}
-  if(!CX.w){ try{ CX.w=new Worker("calc/worker.js"); }catch(e){ CX.msg="この画面では計算できません(ブラウザが対応していません)。"; render(); return; }
+  if(!CX.w){ try{ CX.w=new Worker("calc/worker.js?v=66887da690"); }catch(e){ CX.msg="この画面では計算できません(ブラウザが対応していません)。"; render(); return; }
     CX.w.onmessage=e=>{const d=e.data; if(d.id!==CX.id) return;
       if(d.type==="step"){CX.n=d.n; if(d.p!==undefined) CX.p=Math.max(CX.p||0,d.p); cxTick(); return;}
       if(d.type==="final"){CX.res={key:CX.key,o:d.o,final:true}; CX.busy=false; clearInterval(CX.tm); CX.msg=`計算が終わりました(${(d.ms/1000).toFixed(1)}秒)。`; render(); return;}

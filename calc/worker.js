@@ -1,12 +1,12 @@
 // 11/22 早見表「自分の条件で計算」の裏の計算(Web Worker)。highs.js・calc.js・gen.js・post.js と tpl/ を同じフォルダから読む
-importScripts('highs.js', 'calc.js', 'gen.js', 'post.js');
+importScripts('highs.js?v=66887da690', 'calc.js?v=66887da690', 'gen.js?v=66887da690', 'post.js?v=66887da690');
 let H = null, S = null, GEN = null, POST = null; const TPL = {};
 async function ready() {
-  if (!H) { const bin = await (await fetch('highs.wasm')).arrayBuffer();
+  if (!H) { const bin = await (await fetch('highs.wasm?v=66887da690')).arrayBuffer();
     H = await Module({ instantiateWasm: (info, receive) => { WebAssembly.instantiate(bin, info).then(r => receive(r.instance)); return {}; } }); }
-  if (!S) { S = await (await fetch('tpl/static.json')).json(); GEN = AniimoGen.make(S); POST = AniimoPost.make(S); }
+  if (!S) { S = await (await fetch('tpl/static.json?v=66887da690')).json(); GEN = AniimoGen.make(S); POST = AniimoPost.make(S); }
 }
-async function tpl(lv) { if (!TPL[lv]) TPL[lv] = await (await fetch(`tpl/lv${lv}.json`)).json(); return TPL[lv]; }
+async function tpl(lv) { if (!TPL[lv]) TPL[lv] = await (await fetch(`tpl/lv${lv}.json?v=66887da690`)).json(); return TPL[lv]; }
 function toPage(T, r, lv, cond) {
   const xs = []; T.vars.forEach((v, k) => { if (Math.abs(r.x[k]) > 1e-6) xs.push([v[0], r.x[k]]); });
   const sw = cond.sw ? Object.fromEntries(xs.filter(([k]) => k.startsWith('z:')).map(([k, v]) => [k.slice(2), v])) : null;
