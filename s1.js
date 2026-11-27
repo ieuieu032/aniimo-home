@@ -375,7 +375,7 @@ ${(d.made.some(x=>x.note)||d.stock.length)?`<p class="foot" style="margin:4px 0 
     h+=`<ul class="notes"><li>加工品${X.rawsell&&X.rawsell.length?`と${X.rawsell.map(x=>`<span class="nm">${esc(x)}</span>`).join("・")}`:""}は、${DL?"加工・納品・食料箱":"加工・食料箱"}に使う分以外を売ります。</li>${X.proc.some(g=>g.items.some(it=>it.keep))?`<li>「納品分を残す」は、貯めておいた納品用の素材(${[...new Set(X.proc.flatMap(g=>g.items.flatMap(it=>it.keep||[])))].map(x=>`<span class="nm">${esc(x)}</span>`).join("・")})を使う加工品です。加工施設は倉庫の在庫を自動で使うので、貯めた素材は手持ちに入れておきましょう。</li>`:""}${X.keep&&X.keep.length?`<li>${X.keep.map(x=>`<span class="nm">${esc(x)}</span>`).join("・")}は、加工に使う分以外を売らずに貯めておきます(デイリー納品用)。</li>`:""}</ul></section>`;
   }
   {const sel=[`Lv.${state.lv}`].concat(!state.nf&&(+state.lv>=10)?["イベント対応"]:[]).concat(EV?[L["ev"+EV].tag]:[]).concat(RBV?[L1[RBV].tag]:[]).concat(G2?[L.alt2.tag]:[]).concat(MSO?["時々切り替える"]:[]).join("・");
-    h+=`<section class="area" id="team"><h3>アニモ編成</h3><p class="foot" style="margin:-2px 0 8px">この配置で施設に置いたままにするアニモ(固定枠)と、加工に必要な能力を、持っているアニモから組み合わせて出します。持っていないアニモは「持っていない」で外せます。</p><div id="tm-view">${typeof TMHTML==="function"?TMHTML():""}</div><details class="tool-hist more" id="tm-premise">
+    h+=`<section class="area" id="team"><h3>アニモ編成</h3><p class="foot" style="margin:-2px 0 8px">この配置で施設に置いたままにするアニモ(固定枠)と、加工に必要な能力を、持っているアニモから組み合わせて出します。持っていないアニモは「持っていない」で外せます。</p><p class="foot" style="margin:-4px 0 8px">アニモの名前を押すと、生息地が載っている外部サイト(wikily.gg)が開きます。</p><div id="tm-view">${typeof TMHTML==="function"?TMHTML():""}</div><details class="tool-hist more" id="tm-premise">
     <summary>アニモ編成の計算の前提</summary>
     <ul class="notes">
       <li>アニモ1体の1日の時間を、次の割合で加工・運搬に割り振って計算しています。ほかの作業に呼ばれやすいアニモほど、加工に使える時間を少なくしています。
